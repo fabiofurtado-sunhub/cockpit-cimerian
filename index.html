@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cockpit — Cimerian</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f14; --surface: #161922; --surface2: #1e2330; --surface3: #252b3b;
+  --border: #2a2f3e; --accent: #4f8ef7; --accent2: #f76b4f;
+  --green: #2ecc71; --yellow: #f1c40f; --red: #e74c3c; --purple: #9b59b6;
+  --text: #e8eaf0; --muted: #7b8299; --card-radius: 12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff}
+.header-title h1{font-size:16px;font-weight:700}
+.header-title p{font-size:11px;color:var(--muted)}
+.badge-live{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;display:flex;align-items:center;gap:5px}
+.badge-live::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── MAIN TABS ── */
+.main-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:0}
+.main-tab{padding:12px 20px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s}
+.main-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.main-tab:hover:not(.active){color:var(--text)}
+
+/* ── CONTROLS ── */
+.controls{padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg);border-bottom:1px solid var(--border)}
+.tab-group{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.tab-btn{padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .2s}
+.tab-btn.active{background:var(--accent);color:#fff}
+.tab-btn:hover:not(.active){background:var(--surface2);color:var(--text)}
+.ctrl-label{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+
+/* ── PANELS ── */
+.main-panel{display:none}.main-panel.active{display:block}
+.period-panel{display:none}.period-panel.active{display:block}
+.diag-panel{display:none}.diag-panel.active{display:block}
+.main{padding:0 24px 40px}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:14px 16px;transition:border-color .2s}
+.kpi-card:hover{border-color:var(--accent)}
+.kpi-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px}
+.kpi-value{font-size:21px;font-weight:800;line-height:1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
+
+/* ── ACCOUNT SECTION ── */
+.account-section{margin-bottom:28px}
+.account-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.account-dot{width:9px;height:9px;border-radius:50%}
+.account-name{font-size:15px;font-weight:700}
+.account-id{font-size:10px;color:var(--muted);margin-left:3px}
+.account-status{font-size:10px;font-weight:600;padding:2px 9px;border-radius:20px;margin-left:auto}
+.status-active{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:768px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--card-radius);padding:16px 18px}
+.chart-title{font-size:12px;font-weight:700;margin-bottom:12px}
+.chart-wrap{position:relative;height:175px}
+
+/* ── COMPARE TABLE ── */
+.compare-section{margin-top:28px}
+.compare-title{font-size:14px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.compare-title span{font-size:11px;color:var(--muted);font-weight:400}
+.section-divider{height:1px;background:var(--border);margin:24px 0}
+
+/* ── TABLES ── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--card-radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;background:var(--surface)}
+th{background:var(--surface2);text-align:left;padding:10px 14px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+th.sort-asc::after{content:' ↑'}
+th.sort-desc::after{content:' ↓'}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(42,47,62,.5);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.td-right{text-align:right}
+.td-num{font-variant-numeric:tabular-nums;font-weight:600}
+.td-cimerian{color:var(--accent);font-weight:700}
+.td-usa{color:var(--accent2);font-weight:700}
+.winner{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:5px}
+.win-blue{background:rgba(79,142,247,.15);color:var(--accent)}
+.win-orange{background:rgba(247,107,79,.15);color:var(--accent2)}
+
+/* ── SIGNAL BADGES ── */
+.signal{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px}
+.sig-green{background:rgba(46,204,113,.15);color:var(--green)}
+.sig-yellow{background:rgba(241,196,15,.15);color:var(--yellow)}
+.sig-red{background:rgba(231,76,60,.15);color:var(--red)}
+
+/* ── FEEDBACK CONTROLS ── */
+.fb-controls{padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.fb-section-title{font-size:14px;font-weight:700;margin:20px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.search-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:12px;width:220px;outline:none}
+.search-input:focus{border-color:var(--accent)}
+select.filter-sel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:12px;outline:none;cursor:pointer}
+select.filter-sel:focus{border-color:var(--accent)}
+
+/* ── DAY TABLE ── */
+.day-table-title{font-size:14px;font-weight:700;margin:20px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.today-row td{background:rgba(79,142,247,.07)!important;font-weight:700}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:16px;font-size:10px;color:var(--muted);border-top:1px solid var(--border)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">MX</div>
+    <div class="header-title">
+      <h1>Cockpit de Performance — Meta Ads</h1>
+      <p>MX3 Aceleradora Comercial · Contas Cimerian &amp; Cimerian USA</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="badge-live">Live</div>
+    <div style="font-size:11px;color:var(--muted)" id="currentDate"></div>
+  </div>
+</div>
+
+<!-- MAIN TABS -->
+<div class="main-nav">
+  <button class="main-tab active" onclick="switchMain('painel',this)">📊 Painel</button>
+  <button class="main-tab" onclick="switchMain('diaadia',this)">📅 Dia a Dia</button>
+  <button class="main-tab" onclick="switchMain('campanhas',this)">🎯 Feedback de Campanhas</button>
+  <button class="main-tab" onclick="switchMain('diagnostico',this)">🩺 Diagnóstico</button>
+</div>
+
+<!-- ████████████████  PAINEL  ████████████████ -->
+<div class="main-panel active" id="panel-painel">
+  <div class="controls">
+    <span class="ctrl-label">Período:</span>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchPeriod('7d',this)">Últimos 7 dias</button>
+      <button class="tab-btn" onclick="switchPeriod('month',this)">Mês atual (Abril)</button>
+    </div>
+  </div>
+  <div class="main">
+
+    <!-- 7D PANEL -->
+    <div class="period-panel active" id="pp-7d">
+      <!-- CIMERIAN BR -->
+      <div class="account-section">
+        <div class="account-header">
+          <div class="account-dot" style="background:var(--accent)"></div>
+          <span class="account-name">CA 01 — Cimerian</span>
+          <span class="account-id">act_2062147277567858</span>
+          <span class="account-status status-active">● Ativa</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">💸 Gasto Total</div><div class="kpi-value" style="color:var(--accent)">R$8.810</div><div class="kpi-sub">Média diária: R$1.258</div></div>
+          <div class="kpi-card"><div class="kpi-label">👁️ Impressões</div><div class="kpi-value">802K</div><div class="kpi-sub">Alcance: 599.5K</div></div>
+          <div class="kpi-card"><div class="kpi-label">🖱️ Cliques</div><div class="kpi-value">13.310</div><div class="kpi-sub">Únicos: 12.767</div></div>
+          <div class="kpi-card"><div class="kpi-label">📊 CTR</div><div class="kpi-value" style="color:var(--green)">1,66%</div><div class="kpi-sub">Benchmark >1,5% ✓</div></div>
+          <div class="kpi-card"><div class="kpi-label">💰 CPC</div><div class="kpi-value" style="color:var(--green)">R$0,66</div><div class="kpi-sub">Eficiente</div></div>
+          <div class="kpi-card"><div class="kpi-label">📡 CPM</div><div class="kpi-value">R$10,98</div><div class="kpi-sub">Freq: 1,34×</div></div>
+          <div class="kpi-card"><div class="kpi-label">🎯 Leads</div><div class="kpi-value" style="color:var(--green)">234</div><div class="kpi-sub">Média: 33/dia</div></div>
+          <div class="kpi-card"><div class="kpi-label">💡 CPL</div><div class="kpi-value" style="color:var(--green)">R$37,65</div><div class="kpi-sub">Custo por lead</div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><div class="chart-title">📈 Gasto Diário — Cimerian</div><div class="chart-wrap"><canvas id="sc7_cim"></canvas></div></div>
+          <div class="chart-card"><div class="chart-title">🎯 CTR & CPC — Cimerian</div><div class="chart-wrap"><canvas id="cc7_cim"></canvas></div></div>
+        </div>
+      </div>
+      <div class="section-divider"></div>
+      <!-- CIMERIAN USA -->
+      <div class="account-section">
+        <div class="account-header">
+          <div class="account-dot" style="background:var(--accent2)"></div>
+          <span class="account-name">CA 03 — Cimerian USA</span>
+          <span class="account-id">act_506637335720435</span>
+          <span class="account-status status-active">● Ativa</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">💸 Gasto Total</div><div class="kpi-value" style="color:var(--accent2)">R$4.287</div><div class="kpi-sub">Média diária: R$612</div></div>
+          <div class="kpi-card"><div class="kpi-label">👁️ Impressões</div><div class="kpi-value">39.7K</div><div class="kpi-sub">Alcance: 31.6K</div></div>
+          <div class="kpi-card"><div class="kpi-label">🖱️ Cliques</div><div class="kpi-value">1.117</div><div class="kpi-sub">Únicos: 965</div></div>
+          <div class="kpi-card"><div class="kpi-label">📊 CTR</div><div class="kpi-value" style="color:var(--green)">2,81%</div><div class="kpi-sub">Excelente ✓✓</div></div>
+          <div class="kpi-card"><div class="kpi-label">💰 CPC</div><div class="kpi-value" style="color:var(--yellow)">R$3,84</div><div class="kpi-sub">Mercado USA</div></div>
+          <div class="kpi-card"><div class="kpi-label">📡 CPM</div><div class="kpi-value">R$107,91</div><div class="kpi-sub">Freq: 1,25×</div></div>
+          <div class="kpi-card"><div class="kpi-label">🎯 Leads</div><div class="kpi-value" style="color:var(--yellow)">57</div><div class="kpi-sub">Média: 8/dia</div></div>
+          <div class="kpi-card"><div class="kpi-label">💡 CPL</div><div class="kpi-value" style="color:var(--yellow)">R$75,22</div><div class="kpi-sub">Custo por lead</div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><div class="chart-title">📈 Gasto Diário — Cimerian USA</div><div class="chart-wrap"><canvas id="sc7_usa"></canvas></div></div>
+          <div class="chart-card"><div class="chart-title">🎯 CTR & CPC — Cimerian USA</div><div class="chart-wrap"><canvas id="cc7_usa"></canvas></div></div>
+        </div>
+      </div>
+      <!-- COMPARE -->
+      <div class="compare-section">
+        <div class="compare-title">⚡ Comparativo Side-by-Side <span>— Últimos 7 dias</span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Métrica</th><th style="color:var(--accent)">🔵 Cimerian</th><th style="color:var(--accent2)">🟠 Cimerian USA</th><th>Melhor</th></tr></thead>
+          <tbody>
+            <tr><td>Gasto Total</td><td class="td-cimerian">R$ 8.810,01</td><td class="td-usa">R$ 4.287,30</td><td><span class="winner win-orange">USA</span></td></tr>
+            <tr><td>Impressões</td><td class="td-cimerian">802.019</td><td class="td-usa">39.732</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+            <tr><td>Alcance</td><td class="td-cimerian">599.517</td><td class="td-usa">31.659</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+            <tr><td>Cliques</td><td class="td-cimerian">13.310</td><td class="td-usa">1.117</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+            <tr><td>CTR</td><td class="td-cimerian">1,66%</td><td class="td-usa">2,81%</td><td><span class="winner win-orange">USA</span></td></tr>
+            <tr><td>CPC</td><td class="td-cimerian">R$ 0,66</td><td class="td-usa">R$ 3,84</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+            <tr><td>CPM</td><td class="td-cimerian">R$ 10,98</td><td class="td-usa">R$ 107,91</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+            <tr><td>Leads Totais</td><td class="td-cimerian">234</td><td class="td-usa">57</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+            <tr><td>CPL</td><td class="td-cimerian">R$ 37,65</td><td class="td-usa">R$ 75,22</td><td><span class="winner win-blue">Cimerian</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div><!-- end pp-7d -->
+
+    <!-- MONTH PANEL -->
+    <div class="period-panel" id="pp-month">
+      <div class="account-section">
+        <div class="account-header">
+          <div class="account-dot" style="background:var(--accent)"></div>
+          <span class="account-name">CA 01 — Cimerian</span>
+          <span class="account-id">act_2062147277567858</span>
+          <span class="account-status status-active">● Ativa</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">💸 Gasto (Abril)</div><div class="kpi-value" style="color:var(--accent)">R$1.478</div><div class="kpi-sub">Dias ativos: 2</div></div>
+          <div class="kpi-card"><div class="kpi-label">👁️ Impressões</div><div class="kpi-value">144.6K</div><div class="kpi-sub">Alcance: 112.5K</div></div>
+          <div class="kpi-card"><div class="kpi-label">🖱️ Cliques</div><div class="kpi-value">2.512</div><div class="kpi-sub">Únicos: 2.443</div></div>
+          <div class="kpi-card"><div class="kpi-label">📊 CTR</div><div class="kpi-value" style="color:var(--green)">1,74%</div><div class="kpi-sub">Acima da média ✓</div></div>
+          <div class="kpi-card"><div class="kpi-label">💰 CPC</div><div class="kpi-value" style="color:var(--green)">R$0,59</div><div class="kpi-sub">Melhor que 7d ↓</div></div>
+          <div class="kpi-card"><div class="kpi-label">📡 CPM</div><div class="kpi-value">R$10,22</div><div class="kpi-sub">Freq: 1,29×</div></div>
+          <div class="kpi-card"><div class="kpi-label">🎯 Leads</div><div class="kpi-value" style="color:var(--green)">34</div><div class="kpi-sub">Média: 17/dia</div></div>
+          <div class="kpi-card"><div class="kpi-label">💡 CPL</div><div class="kpi-value" style="color:var(--green)">R$43,48</div><div class="kpi-sub">Custo por lead</div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><div class="chart-title">📈 Gasto Diário — Cimerian Abril</div><div class="chart-wrap"><canvas id="scM_cim"></canvas></div></div>
+          <div class="chart-card"><div class="chart-title">🎯 CTR & CPC — Cimerian Abril</div><div class="chart-wrap"><canvas id="ccM_cim"></canvas></div></div>
+        </div>
+      </div>
+      <div class="section-divider"></div>
+      <div class="account-section">
+        <div class="account-header">
+          <div class="account-dot" style="background:var(--accent2)"></div>
+          <span class="account-name">CA 03 — Cimerian USA</span>
+          <span class="account-id">act_506637335720435</span>
+          <span class="account-status status-active">● Ativa</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">💸 Gasto (Abril)</div><div class="kpi-value" style="color:var(--accent2)">R$667,70</div><div class="kpi-sub">Dias ativos: 2</div></div>
+          <div class="kpi-card"><div class="kpi-label">👁️ Impressões</div><div class="kpi-value">6.059</div><div class="kpi-sub">Alcance: 5.007</div></div>
+          <div class="kpi-card"><div class="kpi-label">🖱️ Cliques</div><div class="kpi-value">205</div><div class="kpi-sub">Únicos: 183</div></div>
+          <div class="kpi-card"><div class="kpi-label">📊 CTR</div><div class="kpi-value" style="color:var(--green)">3,38%</div><div class="kpi-sub">Excelente ✓✓</div></div>
+          <div class="kpi-card"><div class="kpi-label">💰 CPC</div><div class="kpi-value" style="color:var(--yellow)">R$3,26</div><div class="kpi-sub">Melhor que 7d ↓</div></div>
+          <div class="kpi-card"><div class="kpi-label">📡 CPM</div><div class="kpi-value">R$110,20</div><div class="kpi-sub">Freq: 1,21×</div></div>
+          <div class="kpi-card"><div class="kpi-label">🎯 Leads</div><div class="kpi-value" style="color:var(--yellow)">14</div><div class="kpi-sub">Média: 7/dia</div></div>
+          <div class="kpi-card"><div class="kpi-label">💡 CPL</div><div class="kpi-value" style="color:var(--yellow)">R$47,69</div><div class="kpi-sub">Custo por lead</div></div>
+        </div>
+        <div class="charts-row">
+          <div class="chart-card"><div class="chart-title">📈 Gasto Diário — Cimerian USA Abril</div><div class="chart-wrap"><canvas id="scM_usa"></canvas></div></div>
+          <div class="chart-card"><div class="chart-title">🎯 CTR & CPC — Cimerian USA Abril</div><div class="chart-wrap"><canvas id="ccM_usa"></canvas></div></div>
+        </div>
+      </div>
+    </div><!-- end pp-month -->
+
+  </div><!-- end .main -->
+</div><!-- end panel-painel -->
+
+
+<!-- ████████████████  DIA A DIA  ████████████████ -->
+<div class="main-panel" id="panel-diaadia">
+  <div class="controls">
+    <span class="ctrl-label">Conta:</span>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchDayAcc('cim',this)">🔵 Cimerian BR</button>
+      <button class="tab-btn" onclick="switchDayAcc('usa',this)">🟠 Cimerian USA</button>
+    </div>
+    <span class="ctrl-label" style="margin-left:8px">Período:</span>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchDayPeriod('7d',this)">Últimos 7 dias</button>
+      <button class="tab-btn" onclick="switchDayPeriod('month',this)">Abril 2026</button>
+    </div>
+  </div>
+  <div class="main" style="padding-top:20px">
+
+    <!-- DAY CIM 7D -->
+    <div id="day-cim-7d" class="day-panel">
+      <div class="day-table-title">📅 Cimerian BR — Tabela Dia a Dia (26/03 – 02/04)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-day-cim7d">
+          <thead><tr>
+            <th onclick="sortTable('tbl-day-cim7d',0,'str')">Data</th>
+            <th onclick="sortTable('tbl-day-cim7d',1,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-day-cim7d',2,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-day-cim7d',3,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-day-cim7d',4,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-day-cim7d',5,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-day-cim7d',6,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-day-cim7d',7,'num')" class="td-right">CPM (R$)</th>
+            <th onclick="sortTable('tbl-day-cim7d',8,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-day-cim7d',9,'num')" class="td-right">CPL (R$)</th>
+          </tr></thead>
+          <tbody id="body-day-cim7d"></tbody>
+          <tfoot id="foot-day-cim7d"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- DAY USA 7D -->
+    <div id="day-usa-7d" class="day-panel" style="display:none">
+      <div class="day-table-title">📅 Cimerian USA — Tabela Dia a Dia (26/03 – 02/04)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-day-usa7d">
+          <thead><tr>
+            <th onclick="sortTable('tbl-day-usa7d',0,'str')">Data</th>
+            <th onclick="sortTable('tbl-day-usa7d',1,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-day-usa7d',2,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-day-usa7d',3,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-day-usa7d',4,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-day-usa7d',5,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-day-usa7d',6,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-day-usa7d',7,'num')" class="td-right">CPM (R$)</th>
+            <th onclick="sortTable('tbl-day-usa7d',8,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-day-usa7d',9,'num')" class="td-right">CPL (R$)</th>
+          </tr></thead>
+          <tbody id="body-day-usa7d"></tbody>
+          <tfoot id="foot-day-usa7d"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- DAY CIM MONTH -->
+    <div id="day-cim-month" class="day-panel" style="display:none">
+      <div class="day-table-title">📅 Cimerian BR — Abril 2026 (parcial)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-day-cimM">
+          <thead><tr>
+            <th onclick="sortTable('tbl-day-cimM',0,'str')">Data</th>
+            <th onclick="sortTable('tbl-day-cimM',1,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-day-cimM',2,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-day-cimM',3,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-day-cimM',4,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-day-cimM',5,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-day-cimM',6,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-day-cimM',7,'num')" class="td-right">CPM (R$)</th>
+            <th onclick="sortTable('tbl-day-cimM',8,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-day-cimM',9,'num')" class="td-right">CPL (R$)</th>
+          </tr></thead>
+          <tbody id="body-day-cimM"></tbody>
+          <tfoot id="foot-day-cimM"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- DAY USA MONTH -->
+    <div id="day-usa-month" class="day-panel" style="display:none">
+      <div class="day-table-title">📅 Cimerian USA — Abril 2026 (parcial)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-day-usaM">
+          <thead><tr>
+            <th onclick="sortTable('tbl-day-usaM',0,'str')">Data</th>
+            <th onclick="sortTable('tbl-day-usaM',1,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-day-usaM',2,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-day-usaM',3,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-day-usaM',4,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-day-usaM',5,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-day-usaM',6,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-day-usaM',7,'num')" class="td-right">CPM (R$)</th>
+            <th onclick="sortTable('tbl-day-usaM',8,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-day-usaM',9,'num')" class="td-right">CPL (R$)</th>
+          </tr></thead>
+          <tbody id="body-day-usaM"></tbody>
+          <tfoot id="foot-day-usaM"></tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end panel-diaadia -->
+
+
+<!-- ████████████████  CAMPANHAS  ████████████████ -->
+<div class="main-panel" id="panel-campanhas">
+  <div class="fb-controls">
+    <span class="ctrl-label">Conta:</span>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchFbAcc('cim',this)">🔵 Cimerian BR</button>
+      <button class="tab-btn" onclick="switchFbAcc('usa',this)">🟠 Cimerian USA</button>
+    </div>
+    <span class="ctrl-label" style="margin-left:8px">Nível:</span>
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchFbLevel('campaign',this)">Campanha</button>
+      <button class="tab-btn" onclick="switchFbLevel('adset',this)">Conjunto</button>
+      <button class="tab-btn" onclick="switchFbLevel('ad',this)">Anúncio</button>
+    </div>
+    <input class="search-input" id="fb-search" oninput="filterFbTable()" placeholder="🔍 Filtrar por nome...">
+  </div>
+
+  <div class="main" style="padding-top:20px">
+
+    <!-- CAMPAIGN TABLES -->
+    <div id="fb-campaign">
+      <div class="fb-section-title" id="fb-camp-title">🎯 Campanhas — Cimerian BR (Últimos 7 dias)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-fb-camp">
+          <thead><tr>
+            <th onclick="sortTable('tbl-fb-camp',0,'str')">Campanha</th>
+            <th onclick="sortTable('tbl-fb-camp',1,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-fb-camp',2,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-fb-camp',3,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-fb-camp',4,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-fb-camp',5,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-fb-camp',6,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-fb-camp',7,'num')" class="td-right">CPM (R$)</th>
+            <th onclick="sortTable('tbl-fb-camp',8,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-fb-camp',9,'num')" class="td-right">CPL (R$)</th>
+            <th>Sinal</th>
+          </tr></thead>
+          <tbody id="body-fb-camp"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADSET TABLES -->
+    <div id="fb-adset" style="display:none">
+      <div class="fb-section-title" id="fb-adset-title">📦 Conjuntos de Anúncios — Cimerian BR (Últimos 7 dias)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-fb-adset">
+          <thead><tr>
+            <th onclick="sortTable('tbl-fb-adset',0,'str')">Campanha</th>
+            <th onclick="sortTable('tbl-fb-adset',1,'str')">Conjunto</th>
+            <th onclick="sortTable('tbl-fb-adset',2,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-fb-adset',3,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-fb-adset',4,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-fb-adset',5,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-fb-adset',6,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-fb-adset',7,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-fb-adset',8,'num')" class="td-right">CPM (R$)</th>
+            <th onclick="sortTable('tbl-fb-adset',9,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-fb-adset',10,'num')" class="td-right">CPL (R$)</th>
+            <th>Sinal</th>
+          </tr></thead>
+          <tbody id="body-fb-adset"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AD TABLES -->
+    <div id="fb-ad" style="display:none">
+      <div class="fb-section-title" id="fb-ad-title">🎨 Anúncios — Cimerian BR (Últimos 7 dias)</div>
+      <div class="tbl-wrap">
+        <table id="tbl-fb-ad">
+          <thead><tr>
+            <th onclick="sortTable('tbl-fb-ad',0,'str')">Campanha</th>
+            <th onclick="sortTable('tbl-fb-ad',1,'str')">Conjunto</th>
+            <th onclick="sortTable('tbl-fb-ad',2,'str')">Anúncio</th>
+            <th onclick="sortTable('tbl-fb-ad',3,'num')" class="td-right">Gasto (R$)</th>
+            <th onclick="sortTable('tbl-fb-ad',4,'num')" class="td-right">Impressões</th>
+            <th onclick="sortTable('tbl-fb-ad',5,'num')" class="td-right">Alcance</th>
+            <th onclick="sortTable('tbl-fb-ad',6,'num')" class="td-right">Cliques</th>
+            <th onclick="sortTable('tbl-fb-ad',7,'num')" class="td-right">CTR (%)</th>
+            <th onclick="sortTable('tbl-fb-ad',8,'num')" class="td-right">CPC (R$)</th>
+            <th onclick="sortTable('tbl-fb-ad',9,'num')" class="td-right">Leads</th>
+            <th onclick="sortTable('tbl-fb-ad',10,'num')" class="td-right">CPL (R$)</th>
+            <th>Sinal</th>
+          </tr></thead>
+          <tbody id="body-fb-ad"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end panel-campanhas -->
+
+<!-- ████████████████  DIAGNÓSTICO  ████████████████ -->
+<div class="main-panel" id="panel-diagnostico">
+  <div class="controls" style="justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="ctrl-label">Período:</span>
+      <div class="tab-group">
+        <button class="tab-btn active" id="diagTabYtd"  onclick="switchDiag('ytd',this)">YTD 2026</button>
+        <button class="tab-btn"        id="diagTabMes"  onclick="switchDiag('mes',this)">Mês Atual</button>
+        <button class="tab-btn"        id="diagTab7d"   onclick="switchDiag('7d',this)">Últimos 7 dias</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:10px;color:var(--muted)">⟳ Atualização semanal</span>
+      <span id="diagUpdated" style="font-size:10px;color:var(--green);font-weight:600"></span>
+    </div>
+  </div>
+
+  <div class="main" style="padding-top:20px">
+
+    <!-- ── YTD ── -->
+    <div class="diag-panel active" id="diag-ytd">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <!-- BR -->
+        <div class="diag-account-card" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;background:#4f8ef7"></div>
+            <span style="font-weight:700;font-size:14px">CA 01 — Cimerian BR</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:auto">Jan 01 → Abr 02</span>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Investido</div><div class="kpi-value" style="font-size:16px;color:#4f8ef7">R$110K</div><div class="kpi-sub">R$ 110.351</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Leads</div><div class="kpi-value" style="font-size:16px;color:var(--green)">3.463</div><div class="kpi-sub">total</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:var(--green)"><div class="kpi-label">CPL</div><div class="kpi-value" style="font-size:16px;color:var(--green)">R$31,87</div><div class="kpi-sub">✅ excelente</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CTR</div><div class="kpi-value" style="font-size:16px">1,27%</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CPM</div><div class="kpi-value" style="font-size:16px">R$13,85</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(231,76,60,.4)"><div class="kpi-label">Frequência</div><div class="kpi-value" style="font-size:16px;color:var(--red)">3,50×</div><div class="kpi-sub">⚠️ alta</div></div>
+          </div>
+        </div>
+        <!-- USA -->
+        <div class="diag-account-card" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;background:#f76b4f"></div>
+            <span style="font-weight:700;font-size:14px">CA 03 — Cimerian USA</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:auto">Jan 01 → Abr 02</span>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Investido</div><div class="kpi-value" style="font-size:16px;color:#f76b4f">R$74K</div><div class="kpi-sub">R$ 74.491</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Leads</div><div class="kpi-value" style="font-size:16px;color:var(--green)">1.046</div><div class="kpi-sub">total</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(241,196,15,.4)"><div class="kpi-label">CPL</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">R$71,22</div><div class="kpi-sub">⚠️ atenção</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CTR</div><div class="kpi-value" style="font-size:16px">2,24%</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CPM</div><div class="kpi-value" style="font-size:16px">R$56,54</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Frequência</div><div class="kpi-value" style="font-size:16px">1,89×</div><div class="kpi-sub">✅ saudável</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alertas YTD -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">🚨 Alertas Estratégicos — YTD 2026</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:rgba(231,76,60,.07);border:1px solid rgba(231,76,60,.2);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">❌ BR — Frequência 3,50× (Meta: &lt;3)</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6">Audiência saturada. Explica a queda do CPL de R$11 (Jan) para R$74 nos últimos 7 dias. Renovação obrigatória de públicos e criativos.</div>
+          </div>
+          <div style="background:rgba(231,76,60,.07);border:1px solid rgba(231,76,60,.2);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">❌ BR — INSTITUCIONAL 02 desperdiçando budget</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6">R$8.182 investidos com CPL R$190. Essa campanha sozinha destruiu ~R$6K vs. a campanha top do BR (CPL R$6,75). Revisar ou pausar imediatamente.</div>
+          </div>
+          <div style="background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.2);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:6px">⚠️ BR — TRÁFEGO consumiu R$4.381 com 7 leads</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6">Campanha de seguidores com CTR 4,83% mas volume de lead próximo de zero. Boa métrica de topo, porém não está convertendo. Avaliar se justifica o custo.</div>
+          </div>
+          <div style="background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.2);border-radius:8px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--yellow);margin-bottom:6px">⚠️ USA — CPL R$71 vs. meta de mercado</div>
+            <div style="font-size:11px;color:var(--muted);line-height:1.6">[LEADS][FORM] FUNNEL (R$23K) com CPL R$72 e [T][LEADS][FORM] (R$3K) com CPL R$97. ENG/MSG LEADS consumiu R$3.872 com apenas 7 leads (CPL R$553). Necessita reestruturação de funil.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Campanhas YTD -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">🏆 Top Campanhas BR — YTD</div>
+          <div style="font-size:11px;line-height:1.9;color:var(--text)">
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green);font-weight:700">✅ [BR][E][SEGMENTAÇÕES][WPP]</span><span style="color:var(--green);font-weight:700">R$6,75 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green);font-weight:700">✅ [BR][E][WPP] FUNDO DE FUNIL</span><span style="color:var(--green);font-weight:700">R$11,70 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green);font-weight:700">✅ [BR][SITE][LEAD] MEIO FUNIL</span><span style="color:var(--green);font-weight:700">R$17,26 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green);font-weight:700">✅ BR | SITE | LEADS</span><span style="color:var(--green);font-weight:700">R$19,49 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--yellow)">⚠️ [ANDROMEDA][E][WPP] FUNDO</span><span style="color:var(--yellow)">R$74,54 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--red)">❌ INSTITUCIONAL 01 — ENGAJ.</span><span style="color:var(--red)">R$143 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--red)">❌ INSTITUCIONAL 02 — WPP</span><span style="color:var(--red)">R$190 CPL</span></div>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)">🏆 Top Campanhas USA — YTD</div>
+          <div style="font-size:11px;line-height:1.9;color:var(--text)">
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--green);font-weight:700">✅ [LEADS EVENTS][BOF LOOKALIKE]</span><span style="color:var(--green);font-weight:700">R$41,05 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--yellow)">⚠️ [LEADS][FORM] FUNNEL</span><span style="color:var(--yellow)">R$72,48 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--yellow)">⚠️ [T][LEADS][FORM] FUNNEL</span><span style="color:var(--yellow)">R$97,22 CPL</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">🔵 [AWARENESS/REACH] INSTIT.</span><span style="color:var(--muted)">Awareness</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--muted)">🔵 [TRAFFIC][FOLLOWERS][USA]</span><span style="color:var(--muted)">Tráfego</span></div>
+            <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--red)">❌ [ENG][MSG] LEADS</span><span style="color:var(--red)">R$553 CPL</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recomendações YTD -->
+      <div style="background:var(--surface);border:1px solid rgba(79,142,247,.3);border-radius:12px;padding:18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--accent)">🎯 Recomendações Estratégicas — YTD 2026</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px;line-height:1.7;color:var(--text)">
+          <div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">📌 Prioridade 1 — BR Renovação de Audiência</div>
+            <div style="color:var(--muted)">Frequência 3,50× é o principal bloqueador de performance. Criar novos públicos lookalike a partir da base de leads de 2026. Meta: frequência &lt;2,5 nas campanhas de fundo de funil.</div>
+          </div>
+          <div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">📌 Prioridade 2 — Cortar ou reestruturar INSTITUCIONAL 02</div>
+            <div style="color:var(--muted)">R$8.182 com CPL R$190 é inaceitável. O budget deveria ser realocado para [BR][E][SEGMENTAÇÕES][WPP] (CPL R$6,75) que entregou 920 leads com R$6K.</div>
+          </div>
+          <div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">📌 Prioridade 3 — USA: escalar Lookalike BOF</div>
+            <div style="color:var(--muted)">[LEADS EVENTS][BOF LOOKALIKE] entregou R$41 CPL com 688 leads. É o único ativo da USA que funciona. Aumentar budget e duplicar com novas segmentações geográficas.</div>
+          </div>
+          <div>
+            <div style="font-weight:700;color:var(--accent);margin-bottom:6px">📌 Prioridade 4 — USA: cortar ENG/MSG LEADS</div>
+            <div style="color:var(--muted)">R$3.872 investidos com apenas 7 leads (CPL R$553). Essa campanha está destruindo o CPL médio da conta USA. Pausar imediatamente e redirecionar verba.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MÊS ATUAL ── -->
+    <div class="diag-panel" id="diag-mes">
+      <div style="background:rgba(79,142,247,.07);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:11px;color:var(--muted)">
+        ℹ️ <strong style="color:var(--text)">Abril 2026</strong> — Dados referentes a 2 dias de apuração (01/04 – 02/04). Volume ainda baixo; métricas devem ser lidas com cautela.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <!-- BR Mês -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;background:#4f8ef7"></div>
+            <span style="font-weight:700;font-size:14px">CA 01 — Cimerian BR</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:auto">Abr 01–02</span>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Investido</div><div class="kpi-value" style="font-size:16px;color:#4f8ef7">R$1.697</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Leads</div><div class="kpi-value" style="font-size:16px;color:var(--green)">23</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(241,196,15,.4)"><div class="kpi-label">CPL</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">R$73,80</div><div class="kpi-sub">⚠️ vs. R$31 YTD</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CTR</div><div class="kpi-value" style="font-size:16px">1,67%</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CPM</div><div class="kpi-value" style="font-size:16px">R$10,08</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Frequência</div><div class="kpi-value" style="font-size:16px;color:var(--green)">1,44×</div><div class="kpi-sub">✅ ok</div></div>
+          </div>
+        </div>
+        <!-- USA Mês -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;background:#f76b4f"></div>
+            <span style="font-weight:700;font-size:14px">CA 03 — Cimerian USA</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:auto">Abr 01–02</span>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Investido</div><div class="kpi-value" style="font-size:16px;color:#f76b4f">R$750</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Leads</div><div class="kpi-value" style="font-size:16px;color:var(--green)">11</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(241,196,15,.4)"><div class="kpi-label">CPL</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">R$68,16</div><div class="kpi-sub">⚠️ atenção</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CTR</div><div class="kpi-value" style="font-size:16px">3,27%</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CPM</div><div class="kpi-value" style="font-size:16px">R$111</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Frequência</div><div class="kpi-value" style="font-size:16px;color:var(--green)">1,33×</div><div class="kpi-sub">✅ ok</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Análise Mês -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">📊 Análise — Abril 2026 (2 dias)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px;line-height:1.7">
+          <div style="background:rgba(231,76,60,.07);border:1px solid rgba(231,76,60,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--red);margin-bottom:6px">❌ BR — CPL R$73 vs. média histórica R$31</div>
+            <div style="color:var(--muted)">Inicio de mês com CPL 2,3× acima da média YTD. A frequência mensal de 1,44 está ok, mas a performance indica que os criativos ativos não estão convertendo bem. Testar novos ângulos de copy esta semana.</div>
+          </div>
+          <div style="background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ USA — Frequência baixa, bom sinal</div>
+            <div style="color:var(--muted)">Frequência 1,33 em Abril indica que a conta USA está alcançando audiências novas. CPL R$68 ainda está acima do ideal, mas o CPM R$111 é compatível com o mercado americano.</div>
+          </div>
+          <div style="background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--yellow);margin-bottom:6px">⚠️ BR — CTR 1,67% — Volume de clique ok</div>
+            <div style="color:var(--muted)">CTR acima de 1% é satisfatório para campanhas de lead. O gap entre CTR e conversão em lead (23 leads com 2.815 cliques = 0,8% de conv.) sugere problema na landing page ou no formulário de lead.</div>
+          </div>
+          <div style="background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--yellow);margin-bottom:6px">⚠️ Watchlist — BR: 23 leads em 2 dias</div>
+            <div style="color:var(--muted)">Projeção linear de Abril: ~345 leads BR + ~165 leads USA = ~510 leads. Para atingir a meta histórica de Jan (~2K leads/mês BR), precisaria de aceleração significativa de budget ou performance.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ação Imediata Mês -->
+      <div style="background:var(--surface);border:1px solid rgba(79,142,247,.3);border-radius:12px;padding:18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--accent)">⚡ Ação Imediata — Esta Semana</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:11px">
+          <div style="background:var(--surface2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--text);margin-bottom:5px">1. Novo criativo BR</div>
+            <div style="color:var(--muted);line-height:1.6">Lançar 2–3 variações de vídeo/imagem nas campanhas [BR][WPP] para testar novo ângulo de dor. Foco: previsibilidade de receita.</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--text);margin-bottom:5px">2. Revisar landing page</div>
+            <div style="color:var(--muted);line-height:1.6">0,8% de conv. de clique → lead está baixo. Checar velocidade da página, clareza do CTA e redução de campos no formulário.</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--text);margin-bottom:5px">3. Escalar USA BOF</div>
+            <div style="color:var(--muted);line-height:1.6">Com CPL R$41 no [BOF LOOKALIKE], aumentar daily budget 20–30% e duplicar o conjunto para novo lookalike 2–4%.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ÚLTIMOS 7 DIAS ── -->
+    <div class="diag-panel" id="diag-7d">
+      <div style="background:rgba(79,142,247,.07);border:1px solid rgba(79,142,247,.2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:11px;color:var(--muted)">
+        📅 <strong style="color:var(--text)">26/Mar – 01/Abr 2026</strong> — Janela de 7 dias. Referência de performance recente pré-Abril.
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <!-- BR 7d -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;background:#4f8ef7"></div>
+            <span style="font-weight:700;font-size:14px">CA 01 — Cimerian BR</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:auto">26/Mar–01/Abr</span>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Investido</div><div class="kpi-value" style="font-size:16px;color:#4f8ef7">R$8.440</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Leads</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">114</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(231,76,60,.4)"><div class="kpi-label">CPL</div><div class="kpi-value" style="font-size:16px;color:var(--red)">R$74,03</div><div class="kpi-sub">❌ +132% vs. YTD</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CTR</div><div class="kpi-value" style="font-size:16px">1,63%</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CPM</div><div class="kpi-value" style="font-size:16px">R$11,01</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(241,196,15,.4)"><div class="kpi-label">Frequência</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">2,13×</div><div class="kpi-sub">monitorar</div></div>
+          </div>
+        </div>
+        <!-- USA 7d -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <div style="width:9px;height:9px;border-radius:50%;background:#f76b4f"></div>
+            <span style="font-weight:700;font-size:14px">CA 03 — Cimerian USA</span>
+            <span style="font-size:10px;color:var(--muted);margin-left:auto">26/Mar–01/Abr</span>
+          </div>
+          <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Investido</div><div class="kpi-value" style="font-size:16px;color:#f76b4f">R$4.143</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Leads</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">51</div></div>
+            <div class="kpi-card" style="padding:10px 12px;border-color:rgba(241,196,15,.4)"><div class="kpi-label">CPL</div><div class="kpi-value" style="font-size:16px;color:var(--yellow)">R$81,23</div><div class="kpi-sub">⚠️ atenção</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CTR</div><div class="kpi-value" style="font-size:16px">2,78%</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">CPM</div><div class="kpi-value" style="font-size:16px">R$107,70</div></div>
+            <div class="kpi-card" style="padding:10px 12px"><div class="kpi-label">Frequência</div><div class="kpi-value" style="font-size:16px;color:var(--green)">1,87×</div><div class="kpi-sub">✅ saudável</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diagnóstico 7d -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)">📉 Diagnóstico de Performance — Últimos 7 dias</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px;line-height:1.7">
+          <div style="background:rgba(231,76,60,.07);border:1px solid rgba(231,76,60,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--red);margin-bottom:6px">❌ BR — Degradação grave: CPL R$74 vs. R$31 YTD</div>
+            <div style="color:var(--muted)">A conta BR gerou apenas 114 leads em 7 dias com R$8.440 investidos. Em Janeiro gerava ~2.000 leads/mês com CPL ~R$11. A queda de 85% no volume de leads confirma esgotamento de audiência e necessidade urgente de reformulação estrutural.</div>
+          </div>
+          <div style="background:rgba(241,196,15,.07);border:1px solid rgba(241,196,15,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--yellow);margin-bottom:6px">⚠️ USA — Semana regular, CPL R$81 aceitável</div>
+            <div style="color:var(--muted)">51 leads em 7 dias com R$4.143 gastos. A conta USA manteve ritmo estável. CPM R$107 é alto mas esperado para o mercado americano. Frequência 1,87 indica ainda há espaço para audiência sem saturação.</div>
+          </div>
+          <div style="background:rgba(46,204,113,.07);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ BR — CPM R$11 está competitivo</div>
+            <div style="color:var(--muted)">Apesar do CPL alto, o CPM de R$11 indica que o custo de alcance ainda está eficiente. O problema não é o leilão — é a conversão. O gap entre clique e lead é o principal foco de otimização.</div>
+          </div>
+          <div style="background:rgba(231,76,60,.07);border:1px solid rgba(231,76,60,.2);border-radius:8px;padding:12px">
+            <div style="font-weight:700;color:var(--red);margin-bottom:6px">❌ Projeção Abril com base nos 7 dias — crítica</div>
+            <div style="color:var(--muted)">Se manter o ritmo dos últimos 7 dias: BR ~490 leads em Abril (CPL ~R$74) e USA ~220 leads (CPL ~R$81). Total combinado ~710 leads vs. ~920 de Janeiro somente para BR. Intervenção necessária esta semana.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plano de Ação 7d -->
+      <div style="background:var(--surface);border:1px solid rgba(79,142,247,.3);border-radius:12px;padding:18px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);color:var(--accent)">🚀 Plano de Ação — Próximos 7 dias</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:11px">
+          <div>
+            <div style="font-weight:700;color:var(--text);margin-bottom:8px">🔴 BR — Reformulação Urgente</div>
+            <div style="display:flex;flex-direction:column;gap:6px;color:var(--muted);line-height:1.6">
+              <div>• Duplicar [BR][E][SEGMENTAÇÕES][WPP] com novo criativo e novo público (lookalike 2%)</div>
+              <div>• Pausar ou reduzir budget de INSTITUCIONAL 02 e realocar para campanhas de CPL &lt;R$20</div>
+              <div>• A/B test: 3 hooks diferentes para campanha de WhatsApp (dor, resultado, prova social)</div>
+              <div>• Criar campanha de remarketing para visitantes da landing page (últimos 30 dias)</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight:700;color:var(--text);margin-bottom:8px">🟡 USA — Otimização e Escala Seletiva</div>
+            <div style="display:flex;flex-direction:column;gap:6px;color:var(--muted);line-height:1.6">
+              <div>• Aumentar 25% o budget do [BOF LOOKALIKE] — único ativo com CPL competitivo</div>
+              <div>• Pausar [ENG][MSG] LEADS — CPL R$553 é indefensável em qualquer cenário</div>
+              <div>• Testar novo criativo no [LEADS][FORM] FUNNEL (CPL R$72 → meta R$50)</div>
+              <div>• Avaliar expansão geográfica para novos estados com audiência similar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end panel-diagnostico -->
+
+<div class="footer">MX3 Aceleradora Comercial · Meta Ads Cockpit · <span id="footerDate"></span></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════
+const days7  = ['26/03','27/03','28/03','29/03','30/03','31/03','01/04','02/04'];
+const daysM  = ['01/04','02/04'];
+
+const DATA = {
+  cim7d: [
+    {date:'26/03',spend:1162.55,impr:91247,reach:66058,clicks:995,ctr:1.09,cpc:1.17,cpm:12.74,leads:30},
+    {date:'27/03',spend:1197.20,impr:91074,reach:65648,clicks:1044,ctr:1.15,cpc:1.15,cpm:13.15,leads:50},
+    {date:'28/03',spend:1244.49,impr:116061,reach:85467,clicks:1961,ctr:1.69,cpc:0.63,cpm:10.72,leads:20},
+    {date:'29/03',spend:1317.69,impr:122300,reach:90437,clicks:2749,ctr:2.25,cpc:0.48,cpm:10.77,leads:32},
+    {date:'30/03',spend:1268.15,impr:124807,reach:95033,clicks:2737,ctr:2.19,cpc:0.46,cpm:10.16,leads:34},
+    {date:'31/03',spend:1141.72,impr:111869,reach:84301,clicks:1312,ctr:1.17,cpc:0.87,cpm:10.21,leads:34},
+    {date:'01/04',spend:1107.86,impr:109325,reach:83105,clicks:1683,ctr:1.54,cpc:0.66,cpm:10.13,leads:28},
+    {date:'02/04',spend:370.35, impr:35336, reach:29468,clicks:829, ctr:2.35,cpc:0.45,cpm:10.48,leads:6},
+  ],
+  usa7d: [
+    {date:'26/03',spend:702.24,impr:6593,reach:4999,clicks:177,ctr:2.68,cpc:3.97,cpm:106.51,leads:10},
+    {date:'27/03',spend:701.86,impr:6846,reach:5246,clicks:176,ctr:2.57,cpc:3.99,cpm:102.52,leads:10},
+    {date:'28/03',spend:607.93,impr:6113,reach:4951,clicks:162,ctr:2.65,cpc:3.75,cpm:99.45,leads:7},
+    {date:'29/03',spend:655.08,impr:6099,reach:4893,clicks:188,ctr:3.08,cpc:3.48,cpm:107.41,leads:7},
+    {date:'30/03',spend:545.51,impr:4658,reach:3822,clicks:116,ctr:2.49,cpc:4.70,cpm:117.11,leads:6},
+    {date:'31/03',spend:406.98,impr:3364,reach:2741,clicks:93, ctr:2.76,cpc:4.38,cpm:120.98,leads:3},
+    {date:'01/04',spend:522.55,impr:4785,reach:3900,clicks:157,ctr:3.28,cpc:3.33,cpm:109.21,leads:13},
+    {date:'02/04',spend:145.15,impr:1274,reach:1107,clicks:48, ctr:3.77,cpc:3.02,cpm:113.93,leads:1},
+  ],
+  cimMonth: [
+    {date:'01/04',spend:1107.86,impr:109325,reach:83105,clicks:1683,ctr:1.54,cpc:0.66,cpm:10.13,leads:28},
+    {date:'02/04',spend:370.35, impr:35336, reach:29468,clicks:829, ctr:2.35,cpc:0.45,cpm:10.48,leads:6},
+  ],
+  usaMonth: [
+    {date:'01/04',spend:522.55,impr:4785,reach:3900,clicks:157,ctr:3.28,cpc:3.33,cpm:109.21,leads:13},
+    {date:'02/04',spend:145.15,impr:1274,reach:1107,clicks:48, ctr:3.77,cpc:3.02,cpm:113.93,leads:1},
+  ],
+
+  // CAMPAIGNS
+  campaigns: {
+    cim: [
+      {campaign:'[VENDAS] [RMKT] [WHATSAPP] [CONDIÇÃO 10%] 01/03',spend:3902.80,impr:243816,reach:84021,clicks:1694,ctr:0.69,cpc:2.30,cpm:16.01,leads:140,cpl:27.88},
+      {campaign:'[VENDA] [WHATSAPP] [ESTOQUE] 25/02',spend:678.16,impr:35436,reach:23125,clicks:509,ctr:1.44,cpc:1.33,cpm:19.14,leads:8,cpl:84.77},
+      {campaign:'[ENGAJAMENTO] [INSTITUCIONAL 01] [WHATSAPP] 04/02',spend:670.81,impr:54287,reach:40576,clicks:417,ctr:0.77,cpc:1.61,cpm:12.36,leads:18,cpl:37.27},
+      {campaign:'[LEAD] [INSTITUCIONAL 02] [WHATSAPP] 04/02',spend:691.59,impr:45795,reach:32282,clicks:610,ctr:1.33,cpc:1.13,cpm:15.10,leads:4,cpl:172.90},
+      {campaign:'[VENDA] [WHATSAPP] [MÁQUINAS] 06/02',spend:683.39,impr:202913,reach:156594,clicks:1153,ctr:0.57,cpc:0.59,cpm:3.37,leads:2,cpl:341.69},
+      {campaign:'[TRAFEGO] [SEGUIDORES] 02/02',spend:555.00,impr:87611,reach:79192,clicks:6584,ctr:7.52,cpc:0.08,cpm:6.33,leads:0,cpl:0},
+      {campaign:'[VENDA] [WHATSAPP] [CARDIO] 03/02',spend:559.84,impr:48597,reach:32340,clicks:560,ctr:1.15,cpc:1.00,cpm:11.52,leads:18,cpl:31.10},
+      {campaign:'[LEADS] [CATÁLOGO] [SITE]',spend:361.45,impr:23522,reach:11964,clicks:671,ctr:2.85,cpc:0.54,cpm:15.37,leads:30,cpl:12.05},
+      {campaign:'[VENDA] [WHATSAPP] [LAYOUT CIMERIAN] 09/02',spend:336.62,impr:24707,reach:16158,clicks:283,ctr:1.15,cpc:1.19,cpm:13.62,leads:8,cpl:42.08},
+    ],
+    usa: [
+      {campaign:'[LEADS][FORM] FUNNEL',spend:1773.73,impr:16698,reach:9968,clicks:362,ctr:2.17,cpc:4.90,cpm:106.22,leads:37,cpl:47.94},
+      {campaign:'[T][LEADS][FORM] FUNNEL',spend:1016.12,impr:10775,reach:6898,clicks:159,ctr:1.48,cpc:6.39,cpm:94.30,leads:11,cpl:92.37},
+      {campaign:'[ENG][MSG] LEADS',spend:1027.87,impr:5857,reach:2738,clicks:251,ctr:4.29,cpc:4.10,cpm:175.49,leads:3,cpl:342.62},
+      {campaign:'[TRAFFIC] [FOLLOWERS] [USA]',spend:324.69,impr:5130,reach:4687,clicks:297,ctr:5.79,cpc:1.09,cpm:63.29,leads:0,cpl:0},
+    ]
+  },
+
+  // ADSETS
+  adsets: {
+    cim: [
+      {campaign:'[VENDAS][RMKT]…01/03',adset:'[ENGAJAMENTO 90,60,30,14,7D] [FB][IG]',spend:1747.07,impr:110214,reach:35887,clicks:786,ctr:0.71,cpc:2.22,cpm:15.85,leads:38,cpl:45.98},
+      {campaign:'[VENDAS][RMKT]…01/03',adset:'[ENGAJAMENTO 90D] [FB][IG]',spend:1313.98,impr:77615,reach:25398,clicks:517,ctr:0.67,cpc:2.54,cpm:16.93,leads:68,cpl:19.32},
+      {campaign:'[VENDAS][RMKT�…01/03',adset:'[VIDEO VIEW 75+95% - 365D] [FB][IG]',spend:833.02,impr:55613,reach:22483,clicks:384,ctr:0.69,cpc:2.17,cpm:14.98,leads:32,cpl:26.03},
+      {campaign:'[LEAD][INSTITUCIONAL 02]…04/02',adset:'[SEMELHANTE 3% - LISTA Orçamentos] [IG]',spend:667.61,impr:44093,reach:30963,clicks:578,ctr:1.31,cpc:1.16,cpm:15.14,leads:4,cpl:166.90},
+      {campaign:'[ENGAJAMENTO][INSTITUCIONAL 01]…04/02',adset:'[FITNESS][IG] 24 A 62 ANOS',spend:649.28,impr:53150,reach:39713,clicks:395,ctr:0.74,cpc:1.64,cpm:12.22,leads:18,cpl:36.07},
+      {campaign:'[VENDA][WHATSAPP][ESTOQUE]…25/02',adset:'[FITNESS][CEO][IG] 24 A 62 ANOS',spend:591.63,impr:31103,reach:19512,clicks:442,ctr:1.42,cpc:1.34,cpm:19.02,leads:4,cpl:147.91},
+      {campaign:'[VENDA][WHATSAPP][MÁQUINAS]…06/02',adset:'[FITNESS][CEO][IG] 24 A 62 ANOS',spend:562.80,impr:162116,reach:123532,clicks:915,ctr:0.56,cpc:0.62,cpm:3.47,leads:0,cpl:0},
+      {campaign:'[TRAFEGO][SEGUIDORES]…02/02',adset:'[FITNESS][IG][REELS] 24-62 ANOS',spend:554.99,impr:87610,reach:79191,clicks:6584,ctr:7.52,cpc:0.08,cpm:6.33,leads:0,cpl:0},
+      {campaign:'[VENDA][WHATSAPP][CARDIO]…03/02',adset:'[FITNESS][CEO][IG] 24 A 62 ANOS',spend:526.41,impr:45737,reach:29889,clicks:524,ctr:1.15,cpc:1.00,cpm:11.51,leads:18,cpl:29.24},
+      {campaign:'[LEADS][CATÁLOGO][SITE]',adset:'Conv. Interesses Fitness CEO (24-62) — Cópia',spend:287.64,impr:19682,reach:9368,clicks:554,ctr:2.81,cpc:0.52,cpm:14.61,leads:22,cpl:13.07},
+      {campaign:'[VENDA][WHATSAPP][LAYOUT CIMERIAN]…09/02',adset:'[FITNESS][CEO][IG] 24 A 62 ANOS',spend:253.09,impr:20307,reach:13140,clicks:229,ctr:1.13,cpc:1.11,cpm:12.46,leads:6,cpl:42.18},
+      {campaign:'[LEADS][CATÁLOGO][SITE]',adset:'Semelhantes (1%) - Lista nova',spend:73.67,impr:3834,reach:2590,clicks:117,ctr:3.05,cpc:0.63,cpm:19.21,leads:8,cpl:9.21},
+    ],
+    usa: [
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - Público salvo - Mr. Olympia',spend:673.01,impr:4189,reach:2253,clicks:152,ctr:3.63,cpc:4.43,cpm:160.66,leads:16,cpl:42.06},
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - Interesses Fitness e CEO — Estáticos',spend:528.90,impr:6781,reach:5432,clicks:111,ctr:1.64,cpc:4.76,cpm:78.00,leads:11,cpl:48.08},
+      {campaign:'[ENG][MSG] LEADS',adset:'[ENG][CJ 02] P.Salvo - Mr. Olympia',spend:521.72,impr:2912,reach:1450,clicks:151,ctr:5.19,cpc:3.46,cpm:179.16,leads:6,cpl:86.95},
+      {campaign:'[T][LEADS][FORM] FUNNEL',adset:'[T][01] Form - Semelhantes + Interesses',spend:502.16,impr:5233,reach:3705,clicks:69,ctr:1.32,cpc:7.28,cpm:95.96,leads:3,cpl:167.39},
+      {campaign:'[ENG][MSG] LEADS',adset:'[ENG][CJ 03] P.Salvo - Mr. Olympia - SAMSON',spend:370.45,impr:1835,reach:1096,clicks:57,ctr:3.11,cpc:6.50,cpm:201.88,leads:0,cpl:0},
+      {campaign:'[T][LEADS][FORM] FUNNEL',adset:'[T][02] Form - Semelhantes Seguidores',spend:325.27,impr:3956,reach:3124,clicks:63,ctr:1.59,cpc:5.16,cpm:82.22,leads:8,cpl:40.66},
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - Interesses Fitness e CEO',spend:282.85,impr:3437,reach:2639,clicks:62,ctr:1.80,cpc:4.56,cpm:82.30,leads:10,cpl:28.29},
+      {campaign:'[TRAFFIC][FOLLOWERS][USA]',adset:'[FITNESS][IG][REELS] 24-62 ANOS',spend:249.88,impr:3836,reach:3524,clicks:249,ctr:6.49,cpc:1.00,cpm:65.14,leads:0,cpl:0},
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - Interesses Fitness (old)',spend:189.83,impr:1682,reach:1157,clicks:21,ctr:1.25,cpc:9.04,cpm:112.86,leads:1,cpl:189.83},
+      {campaign:'[T][LEADS][FORM] FUNNEL',adset:'[T][04] Form - Semelhantes c/ Interesses',spend:177.46,impr:1528,reach:1234,clicks:21,ctr:1.37,cpc:8.45,cpm:116.14,leads:0,cpl:0},
+      {campaign:'[ENG][MSG] LEADS',adset:'[ENG][CJ 01] Interesses Fitness e CEO',spend:135.70,impr:1110,reach:647,clicks:43,ctr:3.87,cpc:3.16,cpm:122.25,leads:0,cpl:0},
+      {campaign:'[TRAFFIC][FOLLOWERS][USA]',adset:'[FITNESS][IG][FEED] 22-62 ANOS',spend:74.81,impr:1294,reach:1205,clicks:48,ctr:3.71,cpc:1.56,cpm:57.81,leads:0,cpl:0},
+    ]
+  },
+
+  // ADS
+  ads: {
+    cim: [
+      {campaign:'[VENDAS][RMKT]…01/03',adset:'[ENG 90,60,30D]…',ad:'AD - Condição Especial 10% (Vídeo 01)',spend:625.53,impr:42537,reach:30364,clicks:539,ctr:1.27,cpc:1.16,leads:4,cpl:156.38},
+      {campaign:'[VENDA][WHATSAPP][MÁQUINAS]…',adset:'[FITNESS][CEO][IG]…',ad:'AD 02 - Hack Squat Estático',spend:416.53,impr:144808,reach:111554,clicks:784,ctr:0.54,cpc:0.53,leads:0,cpl:0},
+      {campaign:'[VENDA][WHATSAPP][CARDIO]…',adset:'[FITNESS][CEO][IG]…',ad:'AD 14 - Escada 02',spend:163.07,impr:12614,reach:9416,clicks:141,ctr:1.12,cpc:1.16,leads:10,cpl:16.31},
+      {campaign:'[VENDA][WHATSAPP][CARDIO]…',adset:'[FITNESS][CEO][IG]…',ad:'AD 07 - Elíptico Cimerian',spend:115.91,impr:10721,reach:8930,clicks:118,ctr:1.10,cpc:0.98,leads:6,cpl:19.32},
+      {campaign:'[LEADS][CATÁLOGO][SITE]',adset:'Semelhantes (1%)…',ad:'[V] Isa - Pedir cotação',spend:72.67,impr:3777,reach:2568,clicks:116,ctr:3.07,cpc:0.63,leads:8,cpl:9.08},
+      {campaign:'[VENDA][WHATSAPP][CARDIO]…',adset:'[FITNESS][CEO][IG]…',ad:'AD 05 - Video Esteira LCD',spend:27.82,impr:1078,reach:867,clicks:21,ctr:1.95,cpc:1.32,leads:0,cpl:0},
+      {campaign:'[LEAD][INSTITUCIONAL 02]…',adset:'[SEMELHANTE 1%]…',ad:'[INST 02] AD 04 - Supino Sentado',spend:21.82,impr:1632,reach:1264,clicks:29,ctr:1.78,cpc:0.75,leads:0,cpl:0},
+      {campaign:'[ENGAJAMENTO][INSTITUCIONAL 01]…',adset:'[FITNESS][CEO][IG]…',ad:'[INST] AD 02 - Fábrica',spend:21.43,impr:1131,reach:860,clicks:22,ctr:1.95,cpc:0.97,leads:0,cpl:0},
+      {campaign:'[VENDA][WHATSAPP][CARDIO]…',adset:'[RMKT][MIX]…',ad:'AD 07 - Elíptico Cimerian',spend:17.51,impr:1442,reach:1301,clicks:22,ctr:1.53,cpc:0.80,leads:0,cpl:0},
+      {campaign:'[TRAFEGO][SEGUIDORES]…',adset:'[FITNESS][IG][REELS]…',ad:'AD 05 - Construindo Mr Olympia',spend:3.63,impr:396,reach:395,clicks:17,ctr:4.29,cpc:0.21,leads:0,cpl:0},
+    ],
+    usa: [
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - P.Salvo Mr. Olympia',ad:'[FORM] AD 01 - Olympia Hook Video',spend:320.45,impr:1980,reach:1085,clicks:72,ctr:3.64,cpc:4.45,leads:8,cpl:40.06},
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - Interesses Fitness…',ad:'[FORM] AD 02 - Transformation Story',spend:290.10,impr:3640,reach:2915,clicks:59,ctr:1.62,cpc:4.92,leads:6,cpl:48.35},
+      {campaign:'[T][LEADS][FORM] FUNNEL',adset:'[T][01] Form - Semelhantes…',ad:'[T][FORM] AD 01 - Testimonial Video',spend:280.30,impr:2910,reach:2050,clicks:38,ctr:1.31,cpc:7.38,leads:2,cpl:140.15},
+      {campaign:'[ENG][MSG] LEADS',adset:'[ENG][CJ 02] P.Salvo Mr. Olympia',ad:'[MSG] AD 01 - DM Hook',spend:265.80,impr:1480,reach:730,clicks:78,ctr:5.27,cpc:3.41,leads:4,cpl:66.45},
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - P.Salvo Mr. Olympia v2',ad:'[FORM] AD 03 - Before/After Static',spend:230.60,impr:1320,reach:730,clicks:52,ctr:3.94,cpc:4.43,leads:5,cpl:46.12},
+      {campaign:'[T][LEADS][FORM] FUNNEL',adset:'[T][02] Form - Semelhantes Seguidores',ad:'[T][FORM] AD 02 - Social Proof Video',spend:195.80,impr:2380,reach:1880,clicks:38,ctr:1.60,cpc:5.15,leads:5,cpl:39.16},
+      {campaign:'[LEADS][FORM] FUNNEL',adset:'Formulário - Interesses Fitness e CEO',ad:'[FORM] AD 04 - Product Demo',spend:185.50,impr:2250,reach:1730,clicks:40,ctr:1.78,cpc:4.64,leads:6,cpl:30.92},
+      {campaign:'[ENG][MSG] LEADS',adset:'[ENG][CJ 03] Mr. Olympia SAMSON',ad:'[MSG] AD 02 - SAMSON Hook',spend:178.30,impr:890,reach:530,clicks:28,ctr:3.15,cpc:6.37,leads:0,cpl:0},
+      {campaign:'[TRAFFIC][FOLLOWERS][USA]',adset:'[FITNESS][IG][REELS]…',ad:'[TRAFFIC] AD 05 - Construindo Olympia',spend:145.20,impr:2310,reach:2120,clicks:152,ctr:6.58,cpc:0.96,leads:0,cpl:0},
+      {campaign:'[T][LEADS][FORM] FUNNEL',adset:'[T][04] Form - Semelhantes c/ Interesses',ad:'[T][FORM] AD 03 - Quote Card',spend:130.50,impr:920,reach:745,clicks:14,ctr:1.52,cpc:9.32,leads:0,cpl:0},
+    ]
+  }
+};
+
+// ═══════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════
+const f2 = v => v.toFixed(2);
+const fN = v => v.toLocaleString('pt-BR');
+const signal = (cpl, ctr) => {
+  if(cpl === 0 && ctr > 5) return '<span class="signal sig-green">✅ Tráfego</span>';
+  if(cpl === 0) return '<span class="signal sig-yellow">⚠️ Sem conv.</span>';
+  if(cpl < 50) return '<span class="signal sig-green">✅ Ótimo CPL</span>';
+  if(cpl < 100) return '<span class="signal sig-yellow">⚠️ CPL médio</span>';
+  return '<span class="signal sig-red">❌ Alto CPL</span>';
+};
+
+// ═══════════════════════════════════════════
+//  BUILD DAY TABLES
+// ═══════════════════════════════════════════
+function buildDayTable(bodyId, footId, rows, isTodayLast) {
+  const body = document.getElementById(bodyId);
+  const foot = document.getElementById(footId);
+  let html = '';
+  let tot = {spend:0,impr:0,reach:0,clicks:0,leads:0};
+  rows.forEach((r,i) => {
+    const cpl = r.leads > 0 ? f2(r.spend/r.leads) : '—';
+    const isToday = isTodayLast && i === rows.length - 1;
+    html += `<tr${isToday?' class="today-row"':''}>
+      <td>${r.date}${isToday?' <span style="font-size:9px;color:var(--accent)">(hoje)</span>':''}</td>
+      <td class="td-right td-num">${fN(r.spend.toFixed(2))}</td>
+      <td class="td-right td-num">${fN(r.impr)}</td>
+      <td class="td-right td-num">${fN(r.reach)}</td>
+      <td class="td-right td-num">${fN(r.clicks)}</td>
+      <td class="td-right td-num">${f2(r.ctr)}%</td>
+      <td class="td-right td-num">${f2(r.cpc)}</td>
+      <td class="td-right td-num">${f2(r.cpm)}</td>
+      <td class="td-right td-num" style="color:var(--green)">${r.leads}</td>
+      <td class="td-right td-num">${cpl}</td>
+    </tr>`;
+    tot.spend+=r.spend; tot.impr+=r.impr; tot.reach+=r.reach; tot.clicks+=r.clicks; tot.leads+=r.leads;
+  });
+  body.innerHTML = html;
+  const avgCtr = tot.impr > 0 ? f2(tot.clicks/tot.impr*100) : 0;
+  const avgCpc = tot.clicks > 0 ? f2(tot.spend/tot.clicks) : 0;
+  const avgCpm = tot.impr > 0 ? f2(tot.spend/tot.impr*1000) : 0;
+  const totCpl = tot.leads > 0 ? f2(tot.spend/tot.leads) : '—';
+  foot.innerHTML = `<tr style="background:var(--surface3);font-weight:700">
+    <td>TOTAL</td>
+    <td class="td-right">R$ ${fN(tot.spend.toFixed(2))}</td>
+    <td class="td-right">${fN(tot.impr)}</td>
+    <td class="td-right">${fN(tot.reach)}</td>
+    <td class="td-right">${fN(tot.clicks)}</td>
+    <td class="td-right">${avgCtr}%</td>
+    <td class="td-right">${avgCpc}</td>
+    <td class="td-right">${avgCpm}</td>
+    <td class="td-right" style="color:var(--green)">${tot.leads}</td>
+    <td class="td-right">${totCpl}</td>
+  </tr>`;
+}
+
+// ═══════════════════════════════════════════
+//  BUILD CAMPAIGN TABLE
+// ═══════════════════════════════════════════
+function buildCampTable(rows) {
+  let html = '';
+  rows.forEach(r => {
+    const cpl = r.cpl > 0 ? `R$ ${f2(r.cpl)}` : '—';
+    html += `<tr>
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis" title="${r.campaign}">${r.campaign}</td>
+      <td class="td-right td-num">R$ ${fN(r.spend.toFixed(2))}</td>
+      <td class="td-right td-num">${fN(r.impr)}</td>
+      <td class="td-right td-num">${fN(r.reach)}</td>
+      <td class="td-right td-num">${fN(r.clicks)}</td>
+      <td class="td-right td-num">${f2(r.ctr)}%</td>
+      <td class="td-right td-num">${f2(r.cpc)}</td>
+      <td class="td-right td-num">${f2(r.cpm)}</td>
+      <td class="td-right td-num" style="color:var(--green)">${r.leads}</td>
+      <td class="td-right td-num">${cpl}</td>
+      <td>${signal(r.cpl, r.ctr)}</td>
+    </tr>`;
+  });
+  document.getElementById('body-fb-camp').innerHTML = html;
+}
+
+function buildAdsetTable(rows) {
+  let html = '';
+  rows.forEach(r => {
+    const cpl = r.cpl > 0 ? `R$ ${f2(r.cpl)}` : '—';
+    html += `<tr>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted)" title="${r.campaign}">${r.campaign}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${r.adset}">${r.adset}</td>
+      <td class="td-right td-num">R$ ${fN(r.spend.toFixed(2))}</td>
+      <td class="td-right td-num">${fN(r.impr)}</td>
+      <td class="td-right td-num">${fN(r.reach)}</td>
+      <td class="td-right td-num">${fN(r.clicks)}</td>
+      <td class="td-right td-num">${f2(r.ctr)}%</td>
+      <td class="td-right td-num">${f2(r.cpc)}</td>
+      <td class="td-right td-num">${f2(r.cpm)}</td>
+      <td class="td-right td-num" style="color:var(--green)">${r.leads}</td>
+      <td class="td-right td-num">${cpl}</td>
+      <td>${signal(r.cpl, r.ctr)}</td>
+    </tr>`;
+  });
+  document.getElementById('body-fb-adset').innerHTML = html;
+}
+
+function buildAdTable(rows) {
+  let html = '';
+  rows.forEach(r => {
+    const cpl = r.cpl > 0 ? `R$ ${f2(r.cpl)}` : '—';
+    html += `<tr>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted)" title="${r.campaign}">${r.campaign}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted)" title="${r.adset}">${r.adset}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${r.ad}">${r.ad}</td>
+      <td class="td-right td-num">R$ ${fN(r.spend.toFixed(2))}</td>
+      <td class="td-right td-num">${fN(r.impr)}</td>
+      <td class="td-right td-num">${fN(r.reach)}</td>
+      <td class="td-right td-num">${fN(r.clicks)}</td>
+      <td class="td-right td-num">${f2(r.ctr)}%</td>
+      <td class="td-right td-num">${f2(r.cpc)}</td>
+      <td class="td-right td-num" style="color:var(--green)">${r.leads}</td>
+      <td class="td-right td-num">${cpl}</td>
+      <td>${signal(r.cpl, r.ctr)}</td>
+    </tr>`;
+  });
+  document.getElementById('body-fb-ad').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let state = { dayAcc:'cim', dayPeriod:'7d', fbAcc:'cim', fbLevel:'campaign' };
+
+function currentDayPanel() {
+  return `day-${state.dayAcc}-${state.dayPeriod}`;
+}
+
+// ═══════════════════════════════════════════
+//  SWITCHES
+// ═══════════════════════════════════════════
+function switchMain(id, btn) {
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.main-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+}
+
+function switchDiag(id, btn) {
+  document.querySelectorAll('#panel-diagnostico .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.diag-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('diag-'+id).classList.add('active');
+}
+
+function switchPeriod(p, btn) {
+  btn.closest('.tab-group').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.period-panel').forEach(pp => pp.classList.remove('active'));
+  document.getElementById('pp-'+p).classList.add('active');
+}
+
+function switchDayAcc(acc, btn) {
+  btn.closest('.tab-group').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.dayAcc = acc;
+  updateDayPanel();
+}
+
+function switchDayPeriod(p, btn) {
+  btn.closest('.tab-group').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.dayPeriod = p;
+  updateDayPanel();
+}
+
+function updateDayPanel() {
+  document.querySelectorAll('.day-panel').forEach(p => p.style.display = 'none');
+  document.getElementById(currentDayPanel()).style.display = 'block';
+}
+
+function switchFbAcc(acc, btn) {
+  btn.closest('.tab-group').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.fbAcc = acc;
+  refreshFb();
+}
+
+function switchFbLevel(level, btn) {
+  btn.closest('.tab-group').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.fbLevel = level;
+  ['campaign','adset','ad'].forEach(l => {
+    document.getElementById('fb-'+l).style.display = l === level ? 'block' : 'none';
+  });
+  refreshFb();
+}
+
+function refreshFb() {
+  const acc = state.fbAcc;
+  const accLabel = acc === 'cim' ? 'Cimerian BR' : 'Cimerian USA';
+  if(state.fbLevel === 'campaign') {
+    document.getElementById('fb-camp-title').textContent = `🎯 Campanhas — ${accLabel} (Últimos 7 dias)`;
+    buildCampTable(DATA.campaigns[acc]);
+  } else if(state.fbLevel === 'adset') {
+    document.getElementById('fb-adset-title').textContent = `📦 Conjuntos de Anúncios — ${accLabel} (Últimos 7 dias)`;
+    buildAdsetTable(DATA.adsets[acc]);
+  } else {
+    document.getElementById('fb-ad-title').textContent = `🎨 Anúncios — ${accLabel} (Últimos 7 dias)`;
+    buildAdTable(DATA.ads[acc]);
+  }
+}
+
+function filterFbTable() {
+  const q = document.getElementById('fb-search').value.toLowerCase();
+  ['tbl-fb-camp','tbl-fb-adset','tbl-fb-ad'].forEach(id => {
+    const body = document.getElementById(id)?.querySelector('tbody');
+    if(!body) return;
+    Array.from(body.rows).forEach(tr => {
+      const txt = tr.textContent.toLowerCase();
+      tr.style.display = txt.includes(q) ? '' : 'none';
+    });
+  });
+}
+
+// ═══════════════════════════════════════════
+//  SORT TABLE
+// ═══════════════════════════════════════════
+const sortState = {};
+function sortTable(tableId, col, type) {
+  const key = tableId + '_' + col;
+  sortState[key] = sortState[key] === 'asc' ? 'desc' : 'asc';
+  const dir = sortState[key];
+  const table = document.getElementById(tableId);
+  const ths = table.querySelectorAll('th');
+  ths.forEach((th,i) => { th.classList.remove('sort-asc','sort-desc'); if(i===col) th.classList.add('sort-'+dir); });
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.rows);
+  rows.sort((a,b) => {
+    let av = a.cells[col]?.textContent.trim() || '';
+    let bv = b.cells[col]?.textContent.trim() || '';
+    if(type === 'num') {
+      av = parseFloat(av.replace(/[R$\s%.]/g,'').replace(',','.')) || 0;
+      bv = parseFloat(bv.replace(/[R$\s%.]/g,'').replace(',','.')) || 0;
+      return dir === 'asc' ? av - bv : bv - av;
+    }
+    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// ═══════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════
+Chart.defaults.color = '#7b8299';
+Chart.defaults.borderColor = '#2a2f3e';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+const baseBar = (labels, data, color, label) => ({
+  type:'bar', data:{labels, datasets:[{label, data, backgroundColor:color+'33', borderColor:color, borderWidth:2, borderRadius:5}]},
+  options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'rgba(42,47,62,.5)'}}, y:{grid:{color:'rgba(42,47,62,.5)'}, ticks:{callback:v=>'R$'+v.toLocaleString('pt-BR')}}}}
+});
+
+const baseDual = (labels, ctrD, cpcD) => ({
+  type:'line', data:{labels, datasets:[
+    {label:'CTR (%)', data:ctrD, borderColor:'#2ecc71', backgroundColor:'rgba(46,204,113,.1)', tension:.4, yAxisID:'y', pointRadius:3, fill:true},
+    {label:'CPC (R$)', data:cpcD, borderColor:'#f1c40f', backgroundColor:'transparent', tension:.4, yAxisID:'y2', pointRadius:3, borderDash:[4,3]}
+  ]},
+  options:{responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:true, position:'top', labels:{boxWidth:9, padding:8}}},
+    scales:{
+      x:{grid:{color:'rgba(42,47,62,.5)'}},
+      y:{grid:{color:'rgba(42,47,62,.5)'}, ticks:{callback:v=>v+'%'}},
+      y2:{position:'right', grid:{display:false}, ticks:{callback:v=>'R$'+v.toFixed(2)}}
+    }}
+});
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Date
+  const now = new Date();
+  document.getElementById('currentDate').textContent = now.toLocaleDateString('pt-BR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('footerDate').textContent = now.toLocaleString('pt-BR');
+  // Diag update label
+  const diagUpdEl = document.getElementById('diagUpdated');
+  if(diagUpdEl) diagUpdEl.textContent = 'Atualizado: ' + now.toLocaleDateString('pt-BR');
+
+  // CHARTS Painel
+  new Chart(document.getElementById('sc7_cim'), baseBar(days7, DATA.cim7d.map(r=>r.spend), '#4f8ef7','Gasto R$'));
+  new Chart(document.getElementById('cc7_cim'), baseDual(days7, DATA.cim7d.map(r=>r.ctr), DATA.cim7d.map(r=>r.cpc)));
+  new Chart(document.getElementById('sc7_usa'), baseBar(days7, DATA.usa7d.map(r=>r.spend), '#f76b4f','Gasto R$'));
+  new Chart(document.getElementById('cc7_usa'), baseDual(days7, DATA.usa7d.map(r=>r.ctr), DATA.usa7d.map(r=>r.cpc)));
+  new Chart(document.getElementById('scM_cim'), baseBar(daysM, DATA.cimMonth.map(r=>r.spend), '#4f8ef7','Gasto R$'));
+  new Chart(document.getElementById('ccM_cim'), baseDual(daysM, DATA.cimMonth.map(r=>r.ctr), DATA.cimMonth.map(r=>r.cpc)));
+  new Chart(document.getElementById('scM_usa'), baseBar(daysM, DATA.usaMonth.map(r=>r.spend), '#f76b4f','Gasto R$'));
+  new Chart(document.getElementById('ccM_usa'), baseDual(daysM, DATA.usaMonth.map(r=>r.ctr), DATA.usaMonth.map(r=>r.cpc)));
+
+  // DAY TABLES
+  buildDayTable('body-day-cim7d','foot-day-cim7d', DATA.cim7d, true);
+  buildDayTable('body-day-usa7d','foot-day-usa7d', DATA.usa7d, true);
+  buildDayTable('body-day-cimM','foot-day-cimM', DATA.cimMonth, true);
+  buildDayTable('body-day-usaM','foot-day-usaM', DATA.usaMonth, true);
+
+  // FEEDBACK TABLES
+  buildCampTable(DATA.campaigns.cim);
+  buildAdsetTable(DATA.adsets.cim);
+  buildAdTable(DATA.ads.cim);
+});
+</script>
+</body>
+</html>
